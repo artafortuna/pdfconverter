@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Converter | PDF & Image</title>
+    
+    <!-- Font Inter untuk Tipografi Modern -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <style>
+        /* =========================================
+           DESIGN SYSTEM (CSS VARIABLES)
+           ========================================= */
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --success: #10b981;
+            --success-hover: #059669;
+            --bg-body: #f8fafc;
+            --bg-surface: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --radius: 16px;
+            --radius-sm: 8px;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* =========================================
+           GLOBAL STYLES
+           ========================================= */
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+        }
+
+        /* =========================================
+           TABS NAVIGATION
+           ========================================= */
+        .tabs {
+            display: flex;
+            background: var(--border);
+            padding: 6px;
+            border-radius: var(--radius);
+            margin-bottom: 24px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            background: transparent;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 15px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .tab-btn:hover { color: var(--text-main); }
+        .tab-btn.active {
+            background: var(--bg-surface);
+            color: var(--primary);
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* =========================================
+           SURFACE / CARD STYLES
+           ========================================= */
+        .card {
+            background: var(--bg-surface);
+            padding: 30px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-md);
+            display: none;
+            animation: fadeIn 0.4s ease-in-out;
+        }
+        .card.active { display: block; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h2 { margin-top: 0; font-size: 24px; font-weight: 700; color: var(--text-main); }
+        p.subtitle { color: var(--text-muted); margin-top: -10px; margin-bottom: 24px; font-size: 14px; }
+
+        /* =========================================
+           CUSTOM FILE DROPZONE
+           ========================================= */
+        .dropzone-wrapper {
+            position: relative;
+            margin-bottom: 24px;
+        }
+        .dropzone-input {
+            position: absolute;
+            width: 100%; height: 100%;
+            opacity: 0; cursor: pointer;
+            z-index: 10;
+        }
+        .dropzone-ui {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 40px 20px;
+            text-align: center;
+            background: var(--bg-body);
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+        .dropzone-wrapper:hover .dropzone-ui {
+            border-color: var(--primary);
+            background: #eff6ff;
+        }
+        .dropzone-ui svg { width: 48px; height: 48px; color: var(--primary); }
+        .dropzone-ui .dz-title { font-weight: 600; color: var(--text-main); font-size: 16px; }
+        .dropzone-ui .dz-desc { color: var(--text-muted); font-size: 13px; }
+        .file-info {
+            display: none;
+            margin-top: 12px;
+            padding: 12px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: var(--radius-sm);
+            color: #166534;
+            font-size: 14px;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        /* =========================================
+           FORM ELEMENTS
+           ========================================= */
+        .form-group {
+            background: var(--bg-body);
+            padding: 20px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+        }
+        .form-label { display: block; font-weight: 600; margin-bottom: 12px; font-size: 14px; }
+        
+        .radio-options {
+            display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap;
+        }
+        .radio-options label {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 14px; font-weight: 500; cursor: pointer;
+        }
+        
+        .text-input {
+            width: 100%; padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: 'Inter', sans-serif;
+            font-size: 14px; box-sizing: border-box;
+            transition: var(--transition);
+        }
+        .text-input:focus {
+            outline: none; border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+        .help-text { font-size: 12px; color: var(--text-muted); margin-top: 6px; display: block; }
+
+        /* =========================================
+           BUTTONS
+           ========================================= */
+        .btn {
+            width: 100%; padding: 16px;
+            background: var(--success); color: white;
+            border: none; border-radius: var(--radius-sm);
+            font-size: 16px; font-weight: 600; font-family: 'Inter', sans-serif;
+            cursor: pointer; transition: var(--transition);
+            display: flex; justify-content: center; align-items: center; gap: 10px;
+        }
+        .btn:hover { background: var(--success-hover); transform: translateY(-1px); }
+        .btn:active { transform: translateY(1px); }
+        
+        .btn-download {
+            background: var(--primary);
+            width: auto; padding: 10px 20px; font-size: 14px;
+            border-radius: 20px; display: inline-flex;
+        }
+        .btn-download:hover { background: var(--primary-hover); }
+
+        /* =========================================
+           PREVIEW AREAS
+           ========================================= */
+        /* PDF Preview */
+        .preview-box {
+            display: none; margin-bottom: 24px;
+            border: 1px solid var(--border); border-radius: var(--radius-sm);
+            overflow: hidden; background: var(--bg-body);
+        }
+        .preview-header {
+            background: var(--border); padding: 12px 16px;
+            font-weight: 600; font-size: 14px; display: flex; justify-content: space-between;
+        }
+        .preview-content {
+            height: 350px; overflow-y: auto; padding: 20px;
+            display: flex; flex-direction: column; align-items: center; gap: 20px;
+        }
+        .preview-page canvas {
+            max-width: 100%; height: auto;
+            box-shadow: var(--shadow-md); border-radius: 4px;
+        }
+        .page-badge {
+            background: var(--text-main); color: white; font-size: 12px;
+            padding: 4px 10px; border-radius: 12px; margin-bottom: 8px; display: inline-block;
+        }
+
+        /* Image Grid Preview */
+        .img-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 12px; margin-top: 16px;
+        }
+        .img-card {
+            position: relative; aspect-ratio: 1; border-radius: var(--radius-sm);
+            overflow: hidden; border: 1px solid var(--border); background: #fff;
+        }
+        .img-card img { width: 100%; height: 100%; object-fit: cover; }
+        .img-card-badge {
+            position: absolute; top: 4px; left: 4px;
+            background: rgba(0,0,0,0.7); color: white;
+            font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px;
+        }
+
+        /* Result Outputs */
+        .result-item {
+            background: #fff; border: 1px solid var(--border);
+            border-radius: var(--radius-sm); padding: 20px;
+            margin-top: 16px; text-align: center;
+        }
+        .result-item canvas { max-width: 100%; height: auto; border: 1px solid #eee; margin-bottom: 16px; }
+        .status-msg { margin-top: 20px; padding: 16px; border-radius: var(--radius-sm); text-align: center; font-weight: 500; }
+        .status-msg.info { background: #eff6ff; color: #1d4ed8; }
+        .status-msg.success { background: #f0fdf4; color: #15803d; }
+        .status-msg.error { background: #fef2f2; color: #b91c1c; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- TABS NAV -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('tabPdfToImg')" id="btnTab1">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                PDF ke Gambar
+            </button>
+            <button class="tab-btn" onclick="switchTab('tabImgToPdf')" id="btnTab2">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                Gambar ke PDF
+            </button>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- FITUR 1: PDF KE GAMBAR                         -->
+        <!-- ============================================== -->
+        <div id="tabPdfToImg" class="card active">
+            <h2>Ekstrak PDF ke Gambar</h2>
+            <p class="subtitle">Ubah halaman PDF menjadi gambar (PNG) berkualitas tinggi.</p>
+            
+            <div class="dropzone-wrapper">
+                <input type="file" id="pdfInput" class="dropzone-input" accept="application/pdf">
+                <div class="dropzone-ui">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    <div>
+                        <div class="dz-title">Klik atau Tarik file PDF ke sini</div>
+                        <div class="dz-desc">Mendukung format .pdf</div>
+                    </div>
+                </div>
+            </div>
+            <div id="pdfFileInfo" class="file-info"></div>
+
+            <!-- PDF Preview UI -->
+            <div id="pdfPreviewBox" class="preview-box">
+                <div class="preview-header">
+                    <span>Pratinjau Dokumen</span>
+                    <span id="pdfTotalPages">0 Hal</span>
+                </div>
+                <div id="pdfPreviewContent" class="preview-content"></div>
+            </div>
+            
+            <div class="form-group">
+                <span class="form-label">Pengaturan Konversi</span>
+                <div class="radio-options">
+                    <label><input type="radio" name="pdfMode" value="per_page" checked> Pisah Per Halaman</label>
+                    <label><input type="radio" name="pdfMode" value="merge"> 1 Gambar Memanjang</label>
+                </div>
+                <label class="form-label" for="pageSelection" style="margin-top:15px;">Halaman Spesifik (Opsional)</label>
+                <input type="text" id="pageSelection" class="text-input" placeholder="Contoh: 1, 3, 5-8 (Kosongkan jika semua)">
+                <span class="help-text">Gunakan koma untuk memisah, dan strip untuk rentang halaman.</span>
+            </div>
+
+            <button id="btnProcessPdf" class="btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                Proses Konversi
+            </button>
+            <div id="outputPdf" style="margin-top: 20px;"></div>
+        </div>
+
+
+        <!-- ============================================== -->
+        <!-- FITUR 2: GAMBAR KE PDF                         -->
+        <!-- ============================================== -->
+        <div id="tabImgToPdf" class="card">
+            <h2>Gabungkan Gambar ke PDF</h2>
+            <p class="subtitle">Pilih beberapa foto untuk dijadikan satu dokumen PDF rapi.</p>
+            
+            <div class="dropzone-wrapper">
+                <input type="file" id="imageInput" class="dropzone-input" accept="image/png, image/jpeg, image/jpg, image/webp" multiple>
+                <div class="dropzone-ui">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                    <div>
+                        <div class="dz-title">Klik atau Tarik beberapa Gambar</div>
+                        <div class="dz-desc">JPG, PNG, WEBP (Bisa pilih lebih dari 1)</div>
+                    </div>
+                </div>
+            </div>
+            <div id="imgFileInfo" class="file-info"></div>
+
+            <!-- Image Grid Preview -->
+            <div id="imgPreviewGrid" class="img-grid"></div>
+
+            <button id="btnProcessImg" class="btn" style="margin-top: 24px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                Jadikan PDF
+            </button>
+            <div id="outputImg" style="margin-top: 20px;"></div>
+        </div>
+
+    </div>
+
+    <!-- ============================================== -->
+    <!-- LOGIKA JAVASCRIPT (ENGINEERING)                -->
+    <!-- ============================================== -->
+    <script>
+        // Setup Worker PDF.js
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        const { jsPDF } = window.jspdf;
+
+        // UI Tabs Logic
+        function switchTab(tabId) {
+            document.querySelectorAll('.card').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            
+            document.getElementById(tabId).classList.add('active');
+            if(tabId === 'tabPdfToImg') document.getElementById('btnTab1').classList.add('active');
+            else document.getElementById('btnTab2').classList.add('active');
+        }
+
+        // ==========================================
+        // FITUR 1: PDF KE GAMBAR
+        // ==========================================
+        let currentPdfFile = null;
+
+        document.getElementById('pdfInput').addEventListener('change', function(e) {
+            currentPdfFile = e.target.files[0];
+            const infoBox = document.getElementById('pdfFileInfo');
+            const previewBox = document.getElementById('pdfPreviewBox');
+            const previewContent = document.getElementById('pdfPreviewContent');
+            const outDiv = document.getElementById('outputPdf');
+
+            if (currentPdfFile) {
+                // Tampilkan info file
+                infoBox.style.display = 'block';
+                infoBox.innerText = `📄 Terpilih: ${currentPdfFile.name} (${(currentPdfFile.size/1024/1024).toFixed(2)} MB)`;
+                
+                // Siapkan area pratinjau
+                previewBox.style.display = 'block';
+                previewContent.innerHTML = '<div style="color:var(--text-muted); font-size:14px; margin-top:20px;">Memuat pratinjau, mohon tunggu...</div>';
+                outDiv.innerHTML = ''; 
+
+                const reader = new FileReader();
+                reader.onload = async function() {
+                    try {
+                        const typedarray = new Uint8Array(this.result);
+                        const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                        
+                        document.getElementById('pdfTotalPages').innerText = `${pdf.numPages} Halaman`;
+                        previewContent.innerHTML = ''; // Bersihkan loading
+
+                        // Render kualitas rendah untuk pratinjau cepat
+                        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                            const page = await pdf.getPage(pageNum);
+                            const viewport = page.getViewport({ scale: 0.8 });
+
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+                            canvas.height = viewport.height;
+                            canvas.width = viewport.width;
+                            ctx.fillStyle = "white"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                            await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+
+                            const wrapper = document.createElement('div');
+                            wrapper.className = 'preview-page';
+                            wrapper.innerHTML = `<div class="page-badge">Hal ${pageNum}</div>`;
+                            wrapper.appendChild(canvas);
+                            previewContent.appendChild(wrapper);
+                        }
+                    } catch (error) {
+                        previewContent.innerHTML = '<div style="color:#b91c1c;">Gagal memuat dokumen PDF. Pastikan file tidak rusak.</div>';
+                    }
+                };
+                reader.readAsArrayBuffer(currentPdfFile);
+            } else {
+                infoBox.style.display = 'none';
+                previewBox.style.display = 'none';
+            }
+        });
+
+        // Parser Input Nomor Halaman
+        function parsePageSelection(input, maxPages) {
+            if (!input || input.trim() === '') return Array.from({length: maxPages}, (_, i) => i + 1);
+            let pages = new Set();
+            let parts = input.split(',');
+            for (let part of parts) {
+                part = part.trim();
+                if (part.includes('-')) {
+                    let [s, e] = part.split('-');
+                    s = parseInt(s); e = parseInt(e);
+                    if (!isNaN(s) && !isNaN(e)) {
+                        let start = Math.max(1, Math.min(s, e)); 
+                        let end = Math.min(maxPages, Math.max(s, e)); 
+                        for (let i = start; i <= end; i++) pages.add(i);
+                    }
+                } else {
+                    let p = parseInt(part);
+                    if (!isNaN(p) && p >= 1 && p <= maxPages) pages.add(p);
+                }
+            }
+            return Array.from(pages).sort((a, b) => a - b);
+        }
+
+        // Eksekusi PDF -> Gambar
+        document.getElementById('btnProcessPdf').addEventListener('click', function() {
+            if (!currentPdfFile) return alert("Silakan unggah dokumen PDF terlebih dahulu.");
+            
+            const outDiv = document.getElementById('outputPdf');
+            const mode = document.querySelector('input[name="pdfMode"]:checked').value;
+            const pageInput = document.getElementById('pageSelection').value;
+            const btnOriginalText = this.innerHTML;
+            
+            this.innerHTML = 'Memproses...';
+            this.style.opacity = '0.7';
+            outDiv.innerHTML = '<div class="status-msg info">Sedang merender gambar beresolusi tinggi...</div>';
+            outDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            const reader = new FileReader();
+            reader.onload = async () => {
+                try {
+                    const pdf = await pdfjsLib.getDocument(new Uint8Array(reader.result)).promise;
+                    const pagesToProcess = parsePageSelection(pageInput, pdf.numPages);
+                    
+                    if (pagesToProcess.length === 0) {
+                        outDiv.innerHTML = '<div class="status-msg error">Format nomor halaman tidak valid.</div>';
+                        resetBtn(this, btnOriginalText); return;
+                    }
+
+                    outDiv.innerHTML = ''; 
+                    const scale = 2.0; // Render Tajam
+
+                    if (mode === 'per_page') {
+                        for (let pageNum of pagesToProcess) {
+                            const page = await pdf.getPage(pageNum);
+                            const viewport = page.getViewport({ scale: scale });
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+                            canvas.width = viewport.width; canvas.height = viewport.height;
+                            ctx.fillStyle = "white"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                            await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+                            renderOutputItem(outDiv, canvas, `Halaman ${pageNum}`, `${currentPdfFile.name.replace('.pdf','')}_Hal_${pageNum}.png`);
+                        }
+                    } else if (mode === 'merge') {
+                        let totalHeight = 0; let maxWidth = 0; const pagesData = [];
+
+                        for (let pageNum of pagesToProcess) {
+                            const page = await pdf.getPage(pageNum);
+                            const viewport = page.getViewport({ scale: scale });
+                            totalHeight += viewport.height;
+                            if (viewport.width > maxWidth) maxWidth = viewport.width;
+                            pagesData.push({ page, viewport });
+                        }
+
+                        const masterCanvas = document.createElement('canvas');
+                        const masterCtx = masterCanvas.getContext('2d');
+                        masterCanvas.width = maxWidth; masterCanvas.height = totalHeight;
+                        masterCtx.fillStyle = "white"; masterCtx.fillRect(0, 0, maxWidth, totalHeight);
+
+                        let currentY = 0;
+                        for (let { page, viewport } of pagesData) {
+                            const tempCanvas = document.createElement('canvas');
+                            tempCanvas.width = viewport.width; tempCanvas.height = viewport.height;
+                            await page.render({ canvasContext: tempCanvas.getContext('2d'), viewport: viewport }).promise;
+
+                            const xOffset = (maxWidth - viewport.width) / 2;
+                            masterCtx.drawImage(tempCanvas, xOffset, currentY);
+                            currentY += viewport.height;
+                        }
+                        renderOutputItem(outDiv, masterCanvas, `Gambar Gabungan (${pagesToProcess.length} Hal)`, `${currentPdfFile.name.replace('.pdf','')}_Merge.png`);
+                    }
+                    
+                    const successMsg = document.createElement('div');
+                    successMsg.className = 'status-msg success';
+                    successMsg.innerText = 'Konversi Berhasil! Silakan unduh gambar di atas.';
+                    outDiv.appendChild(successMsg);
+
+                } catch (error) {
+                    outDiv.innerHTML = '<div class="status-msg error">Terjadi kesalahan sistem saat konversi.</div>';
+                }
+                resetBtn(this, btnOriginalText);
+            };
+            reader.readAsArrayBuffer(currentPdfFile);
+        });
+
+        function renderOutputItem(parent, canvas, title, filename) {
+            const wrap = document.createElement('div');
+            wrap.className = 'result-item';
+            
+            const titleEl = document.createElement('div');
+            titleEl.style.cssText = "font-weight:600; margin-bottom:12px;";
+            titleEl.innerText = title;
+
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-download';
+            btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Unduh ${title}`;
+            btn.onclick = () => {
+                const a = document.createElement('a');
+                a.download = filename; a.href = canvas.toDataURL('image/png'); a.click();
+            };
+
+            wrap.appendChild(titleEl);
+            wrap.appendChild(canvas);
+            wrap.appendChild(document.createElement('br'));
+            wrap.appendChild(btn);
+            parent.appendChild(wrap);
+        }
+
+        // ==========================================
+        // FITUR 2: GAMBAR KE PDF
+        // ==========================================
+        let selectedImages = [];
+        let objectUrls = []; // Untuk membersihkan memori
+
+        document.getElementById('imageInput').addEventListener('change', function(e) {
+            selectedImages = Array.from(e.target.files);
+            const grid = document.getElementById('imgPreviewGrid');
+            const infoBox = document.getElementById('imgFileInfo');
+            const outDiv = document.getElementById('outputImg');
+            
+            // Bersihkan memory cache URL lama untuk mencegah HP lemot
+            objectUrls.forEach(url => URL.revokeObjectURL(url));
+            objectUrls = [];
+            grid.innerHTML = '';
+            outDiv.innerHTML = '';
+
+            if (selectedImages.length > 0) {
+                infoBox.style.display = 'block';
+                infoBox.innerText = `🖼️ Terpilih: ${selectedImages.length} Gambar`;
+                
+                selectedImages.forEach((file, idx) => {
+                    const url = URL.createObjectURL(file);
+                    objectUrls.push(url);
+
+                    const card = document.createElement('div');
+                    card.className = 'img-card';
+                    card.innerHTML = `
+                        <div class="img-card-badge">${idx + 1}</div>
+                        <img src="${url}" alt="preview">
+                    `;
+                    grid.appendChild(card);
+                });
+            } else {
+                infoBox.style.display = 'none';
+            }
+        });
+
+        // Konversi File ke DataURL
+        const fileToDataURL = file => new Promise(res => {
+            const reader = new FileReader();
+            reader.onload = e => res(e.target.result);
+            reader.readAsDataURL(file);
+        });
+
+        // Ambil Dimensi Asli Gambar
+        const getImgDimensions = src => new Promise(res => {
+            const img = new Image();
+            img.onload = () => res({ width: img.width, height: img.height });
+            img.src = src;
+        });
+
+        // Eksekusi Gambar -> PDF
+        document.getElementById('btnProcessImg').addEventListener('click', async function() {
+            if (selectedImages.length === 0) return alert('Silakan masukkan minimal 1 gambar.');
+            
+            const outDiv = document.getElementById('outputImg');
+            const btnOriginalText = this.innerHTML;
+            
+            this.innerHTML = 'Merakit PDF...';
+            this.style.opacity = '0.7';
+            outDiv.innerHTML = '<div class="status-msg info">Mengoptimasi gambar dan merakit dokumen...</div>';
+
+            try {
+                let doc = null;
+                
+                for (let i = 0; i < selectedImages.length; i++) {
+                    const dataUrl = await fileToDataURL(selectedImages[i]);
+                    const dim = await getImgDimensions(dataUrl);
+                    const orientasi = dim.width > dim.height ? 'l' : 'p';
+                    
+                    // Jeda Anti-Crash untuk Browser / Compiler Online
+                    await new Promise(resolve => setTimeout(resolve, 50)); 
+                    
+                    if (i === 0) {
+                        doc = new jsPDF({ orientation: orientasi, unit: 'px', format: [dim.width, dim.height] });
+                        doc.addImage(dataUrl, 'JPEG', 0, 0, dim.width, dim.height);
+                    } else {
+                        doc.addPage([dim.width, dim.height], orientasi);
+                        doc.addImage(dataUrl, 'JPEG', 0, 0, dim.width, dim.height);
+                    }
+                }
+                
+                doc.save('Hasil_Gabungan_Gambar.pdf');
+                outDiv.innerHTML = '<div class="status-msg success">🎉 Selesai! File PDF berhasil diunduh.</div>';
+                
+            } catch (error) {
+                outDiv.innerHTML = '<div class="status-msg error">Gagal menggabungkan gambar ke PDF. File mungkin rusak atau terlalu besar.</div>';
+            }
+            resetBtn(this, btnOriginalText);
+        });
+
+        function resetBtn(btn, text) {
+            btn.innerHTML = text;
+            btn.style.opacity = '1';
+        }
+    </script>
+</body>
+</html>
